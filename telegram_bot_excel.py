@@ -15,11 +15,19 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 import os
 import json
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Загружаем переменные из .env файла
+load_dotenv()
 
 # ============================================
 # ИНИЦИАЛИЗАЦИЯ БОТА
 # ============================================
-bot = telebot.TeleBot('')
+TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+if not TOKEN:
+    raise ValueError('❌ TELEGRAM_BOT_TOKEN не найден в переменных окружения!\nУстановите токен в файл .env')
+
+bot = telebot.TeleBot(TOKEN)
 EXCEL_FILE = 'syllabuses.xlsx'
 JSON_FILE = 'frontend/data.json'
 

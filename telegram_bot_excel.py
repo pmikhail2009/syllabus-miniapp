@@ -19,7 +19,7 @@ from datetime import datetime
 # ============================================
 # ИНИЦИАЛИЗАЦИЯ БОТА
 # ============================================
-bot = telebot.TeleBot('8297243093:AAGK9lm0zqZ6g8WOkPAiMr9_SQ-PgAUN6I4')
+bot = telebot.TeleBot('')
 EXCEL_FILE = 'syllabuses.xlsx'
 JSON_FILE = 'frontend/data.json'
 

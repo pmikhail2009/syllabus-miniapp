@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RANEPA Lyceum Syllabuses</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="logo-container">
+            <img src="https://static1.tgstat.ru/channels/_0/22/221e35a5e796942d5ac3bd2e3081e59b.jpg" alt="Logo" class="logo">
+        </div>
+        <h1 class="title">Силлабусы</h1>
+        
+        <!-- Экран выбора класса -->
+        <div id="grade-screen" class="screen active">
+            <p class="subtitle">Выберите класс:</p>
+            <div class="buttons-grid">
+                <button class="grade-btn" data-grade="8">8 класс</button>
+                <button class="grade-btn" data-grade="9">9 класс</button>
+                <button class="grade-btn" data-grade="10">10 класс</button>
+                <button class="grade-btn" data-grade="11">11 класс</button>
+            </div>
+        </div>
+        
+        <!-- Экран предметов -->
+        <div id="subject-screen" class="screen">
+            <button class="back-btn" onclick="goBack()">⬅️ Назад</button>
+            <p class="subtitle" id="grade-title">Предметы</p>
+            <div id="subjects-list" class="subjects-list"></div>
+        </div>
+        
+        <!-- Экран выбора учителя -->
+        <div id="teacher-screen" class="screen">
+            <button class="back-btn" onclick="goBack()">⬅️ Назад</button>
+            <p class="subtitle" id="subject-title">Выберите преподавателя:</p>
+            <div id="teachers-list" class="teachers-list"></div>
+        </div>
+        
+        <!-- Результат -->
+        <div id="result-screen" class="screen">
+            <button class="back-btn" onclick="resetApp()">🏠 В меню</button>
+            <div class="result-card">
+                <h3 id="result-subject"></h3>
+                <p><strong>Класс:</strong> <span id="result-grade"></span></p>
+                <p><strong>Преподаватель:</strong> <span id="result-teacher"></span></p>
+                <a id="result-link" href="#" target="_blank" class="syllabus-link">📄 Открыть силлабус</a>
+            </div>
+        </div>
+        
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Загрузка...</p>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

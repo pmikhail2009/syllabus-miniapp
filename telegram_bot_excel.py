@@ -1,6 +1,6 @@
 # ВАЖНАЯ ИНФА
 # ПРО ИИ:
-# Я использова ИИ для 5 вещей
+# Я использовал ИИ для 5 вещей
 # 1) Проверка, оптимизация и исправление ошибок
 # 2) Сделать приписки типа
 # 3) Сделать classes_data Я крайне ленивый так, что создание того списка я поручил ИИ
@@ -19,7 +19,7 @@ from datetime import datetime
 # ============================================
 # ИНИЦИАЛИЗАЦИЯ БОТА
 # ============================================
-bot = telebot.TeleBot('8297243093:AAGK9lm0zqZ6g8WOkPAiMr9_SQ-PgAUN6I4')
+bot = telebot.TeleBot('')
 EXCEL_FILE = 'syllabuses.xlsx'
 JSON_FILE = 'frontend/data.json'
 
@@ -285,7 +285,7 @@ def export_to_json():
     with open(JSON_FILE, 'w', encoding='utf-8') as f:
         json.dump(export_data, f, ensure_ascii=False, indent=2)
     
-    print(f"✅ data.json обновлён: {JSON_FILE}")
+    print(f"✅ Экспорт завершён: {JSON_FILE}")
     return True
 
 
@@ -365,7 +365,8 @@ def send_help(message):
         "/start - Главное меню\n"
         "/help - Справка\n"
         "/reload - Перезагрузить данные из Excel\n"
-        "/export - Экспорт данных для Mini App\n\n"
+        "/export - Экспорт данных для Mini App\n"
+        "/webapp - Отправить ссылку на Mini App\n\n"
         "На каждом экране есть кнопка '⬅️ Назад' для возврата в предыдущее меню."
     )
     bot.send_message(chat_id, help_text, parse_mode='HTML', reply_markup=get_main_keyboard())
@@ -417,7 +418,7 @@ def send_miniapp(message):
     chat_id = message.chat.id
     
     # ⚠️ ЗАМЕНИТЕ НА ВАШУ ССЫЛКУ ПОСЛЕ ДЕПЛОЯ!
-    webapp_url = "https://your-username.github.io/syllabus-miniapp/"
+    webapp_url = "https://pmikhail2009.github.io/syllabus-miniapp/"
     
     markup = types.InlineKeyboardMarkup()
     btn = types.InlineKeyboardButton(

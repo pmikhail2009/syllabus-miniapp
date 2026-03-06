@@ -14,17 +14,23 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 import os
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Загружаем переменные из .env файла
+load_dotenv()
 
 # ============================================
 # ИНИЦИАЛИЗАЦИЯ БОТА
 # ============================================
-
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 if not BOT_TOKEN:
     raise ValueError("❌ Не найден BOT_TOKEN в файле .env!")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 EXCEL_FILE = os.getenv('EXCEL_FILE', 'syllabuses.xlsx')
+
+# Словарь для хранения выбранного класса каждого пользователя
+user_selected_grade = {}
 
 # ============================================
 # ФУНКЦИИ ДЛЯ РАБОТЫ С EXCEL
@@ -43,7 +49,7 @@ def create_excel_file():
         bottom=Side(style='thin')
     )
 
-    # Данные для каждого класса (с учителями)
+    # Данные для каждого класса (исправлены все пробелы в URL)
     classes_data = {
         '8': [
             ('Русский язык', 'Е. О. Борисова', 'https://ranepa-lyceum.ru/docs/sil_25-26_1/sil_8_1_rus_b_beo_2025.pdf'),
@@ -154,8 +160,8 @@ def create_excel_file():
             ('Обществознание', 'А. Н. Егорова (базовый)', 'https://ranepa-lyceum.ru/docs/sil_25-26_1/sil_11_1_obsh_b_ean_2025.pdf'),
             ('Обществознание', 'А. Н. Егорова (углублённый)', 'https://ranepa-lyceum.ru/docs/sil_25-26_1/sil_11_1_obsh_u_ean_2025.pdf'),
             ('Социология', 'М. А. Серкина', 'https://ranepa-lyceum.ru/docs/sil_25-26_1/sil_11_1_soc_u_sma_2025.pdf'),
-            ('Английский язык', 'В. В. Хитрук (Gateway В2)', 'https://ranepa-lyceum.ru/docs/sil_25-26_1/sil_11_1_eng_u_GWB2_hvv_2025.pdf'),
-            ('Английский язык', 'В. В. Хитрук (Gateway С1)', 'https://ranepa-lyceum.ru/docs/sil_25-26_1/sil_11_1_eng_u_GWC1_hvv_2025.pdf'),
+            ('Английский язык', 'В. В. Хитрук (Gateway B2)', 'https://ranepa-lyceum.ru/docs/sil_25-26_1/sil_11_1_eng_u_GWB2_hvv_2025.pdf'),
+            ('Английский язык', 'В. В. Хитрук (Gateway C1)', 'https://ranepa-lyceum.ru/docs/sil_25-26_1/sil_11_1_eng_u_GWC1_hvv_2025.pdf'),
             ('Английский язык', 'В. В. Хитрук (Prepare 7)', 'https://ranepa-lyceum.ru/docs/sil_25-26_1/sil_11_1_eng_u_PR7_hvv_2025.pdf'),
             ('Английский язык', 'С. С. Московская', 'https://ranepa-lyceum.ru/docs/sil_25-26_1/sil_11_1_eng_u_mss_2025.pdf'),
             ('Английский язык', 'А. Л. Ромашкина', 'https://ranepa-lyceum.ru/docs/sil_25-26_1/sil_11_1_eng_u_ral_2025.pdf'),

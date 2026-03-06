@@ -8,7 +8,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 import os
 from dotenv import load_dotenv
 
-# грузим токен из .env — так безопаснее, чем хардкодить
+# грузим токен из .env 
 load_dotenv()
 TOKEN = os.getenv('BOT_TOKEN')
 if not TOKEN:
@@ -16,7 +16,7 @@ if not TOKEN:
     exit(1)
 
 tg_bot = telebot.TeleBot(TOKEN)
-XLS_PATH = 'syllabuses.xlsx'  # можно поменять, если нужно
+XLS_PATH = 'syllabuses.xlsx'  
 
 # храним, какой класс выбрал юзер (по chat_id)
 user_grade = {}

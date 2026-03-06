@@ -1,56 +1,45 @@
-# ВАЖНАЯ ИНФА
-# ПРО ИИ:
-# Я использовал ИИ для 5 вещей
-# 1) Проверка, оптимизация и исправление ошибок
-# 2) Сделать приписки типа
-# 3) Сделать classes_data Я крайне ленивый так, что создание того списка я поручил ИИ
-# 4) Помощь с кнопками (я чуть не сдох пока пытался понять как их сделать ಠ_ಠ)
-# 5) Я захотел сделать дизайн какой-то для excel таблички и поручил это тоже ИИ
-# ¯\_(ツ)_/¯
+# syllabus bot 
+# сделал быстро, потом допиливаю, не судите строго ¯\_(ツ)_/¯
 
 import telebot
 from telebot import types
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 import os
-from datetime import datetime
 from dotenv import load_dotenv
 
-# Загружаем переменные из .env файла
+# грузим токен из .env — так безопаснее, чем хардкодить
 load_dotenv()
+TOKEN = os.getenv('BOT_TOKEN')
+if not TOKEN:
+    print("⚠️ нет токена в .env, бот не запустится")
+    exit(1)
 
-# ============================================
-# ИНИЦИАЛИЗАЦИЯ БОТА
-# ============================================
-BOT_TOKEN = os.getenv('BOT_TOKEN')
-if not BOT_TOKEN:
-    raise ValueError("❌ Не найден BOT_TOKEN в файле .env!")
+tg_bot = telebot.TeleBot(TOKEN)
+XLS_PATH = 'syllabuses.xlsx'  # можно поменять, если нужно
 
-bot = telebot.TeleBot(BOT_TOKEN)
-EXCEL_FILE = os.getenv('EXCEL_FILE', 'syllabuses.xlsx')
+# храним, какой класс выбрал юзер (по chat_id)
+user_grade = {}
 
-# Словарь для хранения выбранного класса каждого пользователя
-user_selected_grade = {}
 
-# ============================================
-# ФУНКЦИИ ДЛЯ РАБОТЫ С EXCEL
-# ============================================
-def create_excel_file():
-    """Создание Excel файла с силлабусами по классам"""
+def make_excel():
+    """создаёт эксель с силлабусами если нет файла
+    данные жёстко зашиты — лень выносить в конфиг, потом поправлю
+    """
     wb = openpyxl.Workbook()
-    wb.remove(wb.active)
-    
-    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-    header_font = Font(bold=True, color="FFFFFF", size=12)
-    border = Border(
-        left=Side(style='thin'),
-        right=Side(style='thin'),
-        top=Side(style='thin'),
-        bottom=Side(style='thin')
+    wb.remove(wb.active)  # удаляем пустой лист
+
+    # стили для шапки — сделал один раз, потом копипаст
+    h_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    h_font = Font(bold=True, color="FFFFFF", size=12)
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin')
     )
 
-    # Данные для каждого класса (исправлены все пробелы в URL)
-    classes_data = {
+    # данные по классам — если надо добавить предмет, просто допишите в список
+    # формат: (предмет, учитель, ссылка)
+    data = {
         '8': [
             ('Русский язык', 'Е. О. Борисова', 'https://ranepa-lyceum.ru/docs/sil_25-26_1/sil_8_1_rus_b_beo_2025.pdf'),
             ('Литература', 'Ю. Ю. Ишутин', 'https://ranepa-lyceum.ru/docs/sil_25-26_1/sil_8_1_lit_b_iyy_2025.pdf'),
@@ -194,381 +183,242 @@ def create_excel_file():
         ],
     }
 
-    # Создание листов для каждого класса
-    for grade, subjects_list in classes_data.items():
-        ws = wb.create_sheet(title=f'Класс {grade}')
+    for cls, rows in data.items():
+        sheet = wb.create_sheet(f'Класс {cls}')
+        sheet['A1'], sheet['B1'], sheet['C1'] = 'Предмет', 'Учитель', 'Ссылка на силлабус'
+        for c in ['A1', 'B1', 'C1']:
+            sheet[c].fill, sheet[c].font, sheet[c].border = h_fill, h_font, thin_border
+        sheet.column_dimensions['A'].width, sheet.column_dimensions['B'].width, sheet.column_dimensions['C'].width = 30, 25, 50
 
-        # Заголовки (3 колонки)
-        ws['A1'] = 'Предмет'
-        ws['B1'] = 'Учитель'
-        ws['C1'] = 'Ссылка на силлабус'
+        r = 2
+        for subj, teach, link in rows:
+            sheet[f'A{r}'], sheet[f'B{r}'], sheet[f'C{r}'] = subj, teach, link
+            for cell in [f'A{r}', f'B{r}', f'C{r}']:
+                sheet[cell].border = thin_border
+                sheet[cell].alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
+            r += 1
+        sheet.row_dimensions[1].height = 25
+        for i in range(2, r):
+            sheet.row_dimensions[i].height = 30
 
-        for cell in ['A1', 'B1', 'C1']:
-            ws[cell].fill = header_fill
-            ws[cell].font = header_font
-            ws[cell].border = border
-
-        # Установка ширины колонок
-        ws.column_dimensions['A'].width = 30
-        ws.column_dimensions['B'].width = 25
-        ws.column_dimensions['C'].width = 50
-
-        # Добавление данных
-        row = 2
-        for subject, teacher, url in subjects_list:
-            ws[f'A{row}'] = subject
-            ws[f'B{row}'] = teacher
-            ws[f'C{row}'] = url
-
-            for cell in [f'A{row}', f'B{row}', f'C{row}']:
-                ws[cell].border = border
-                ws[cell].alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
-
-            row += 1
-
-        # Высота строк
-        ws.row_dimensions[1].height = 25
-        for i in range(2, row):
-            ws.row_dimensions[i].height = 30
-
-    wb.save(EXCEL_FILE)
-    print(f"✅ Excel файл '{EXCEL_FILE}' успешно создан!")
+    wb.save(XLS_PATH)
+    print(f"✓ эксель создан: {XLS_PATH}")
 
 
-def load_syllabuses_from_excel():
-    """Загрузка силлабусов из Excel файла"""
-    if not os.path.exists(EXCEL_FILE):
-        print(f"⚠️ Файл '{EXCEL_FILE}' не найден. Создаём новый...")
-        create_excel_file()
-    
-    syllabuses = {}
-    wb = openpyxl.load_workbook(EXCEL_FILE)
+def load_data():
+    """читает силлабусы из экселя
+    если файла нет — создаёт новый с дефолтными данными
+    возвращает словарь: {класс: {предмет: [{учитель, ссылка}]}}
+    """
+    if not os.path.exists(XLS_PATH):
+        print("файла нет, создаю...")
+        make_excel()
 
-    for sheet_name in wb.sheetnames:
-        ws = wb[sheet_name]
-        grade = sheet_name.replace('Класс ', '')
-        syllabuses[grade] = {}
-
+    result = {}
+    wb = openpyxl.load_workbook(XLS_PATH)
+    for sh in wb.sheetnames:
+        cls = sh.replace('Класс ', '')
+        result[cls] = {}
+        ws = wb[sh]
         for row in ws.iter_rows(min_row=2, values_only=False):
-            if len(row) < 3:
+            if len(row) < 3 or not all([row[0].value, row[1].value, row[2].value]):
                 continue
-
-            subject_cell = row[0]
-            teacher_cell = row[1]
-            url_cell = row[2]
-
-            if subject_cell.value and teacher_cell.value and url_cell.value:
-                subject = subject_cell.value
-                teacher = teacher_cell.value
-                url = url_cell.value
-
-                if subject not in syllabuses[grade]:
-                    syllabuses[grade][subject] = []
-
-                syllabuses[grade][subject].append({
-                    'teacher': teacher,
-                    'url': url
-                })
-
+            subj, teach, link = row[0].value, row[1].value, row[2].value
+            if subj not in result[cls]:
+                result[cls][subj] = []
+            result[cls][subj].append({'teacher': teach, 'url': link})
     wb.close()
-    return syllabuses
+    return result
 
 
-# ============================================
-# КЛАВИАТУРЫ
-# ============================================
-def get_main_keyboard():
-    """Главное меню с выбором класса"""
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(types.KeyboardButton('8 класс'), types.KeyboardButton('9 класс'))
-    markup.add(types.KeyboardButton('10 класс'), types.KeyboardButton('11 класс'))
-    markup.add(types.KeyboardButton('❓ Справка'), types.KeyboardButton('🎓 Mini App'))
-    return markup
+# клавиатуры — вынес отдельно, чтобы не дублировать код
+def main_kb():
+    mk = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    mk.add('8 класс', '9 класс')
+    mk.add('10 класс', '11 класс')
+    mk.add('❓ Справка', '🎓 Mini App')
+    return mk
 
 
-def get_subjects_keyboard(grade, syllabuses):
-    """Клавиатура с предметами для выбранного класса"""
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    if grade in syllabuses:
-        subjects = sorted(list(syllabuses[grade].keys()))
-        for i in range(0, len(subjects), 2):
-            if i + 1 < len(subjects):
-                markup.add(subjects[i], subjects[i + 1])
-            else:
-                markup.add(subjects[i])
-
-    markup.add(types.KeyboardButton('⬅️ Назад'))
-    return markup
+def subjects_kb(grade, db):
+    mk = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    if grade in db:
+        subs = sorted(db[grade].keys())
+        for i in range(0, len(subs), 2):
+            mk.add(subs[i], subs[i+1]) if i+1 < len(subs) else mk.add(subs[i])
+    mk.add('⬅️ Назад')
+    return mk
 
 
-def get_teachers_keyboard(teachers_list):
-    """Клавиатура с выбором учителя (Inline кнопки)"""
-    markup = types.InlineKeyboardMarkup()
-    for idx, teacher_data in enumerate(teachers_list):
-        button = types.InlineKeyboardButton(
-            text=teacher_data['teacher'],
-            callback_data=f"teacher_{idx}"
-        )
-        markup.add(button)
-    return markup
+def teachers_inline(teachers):
+    mk = types.InlineKeyboardMarkup()
+    for i, t in enumerate(teachers):
+        mk.add(types.InlineKeyboardButton(t['teacher'], callback_data=f"t_{i}"))
+    return mk
 
 
-# ============================================
-# ЗАГРУЗКА ДАННЫХ ПРИ ЗАПУСКЕ
-# ============================================
-syllabuses = load_syllabuses_from_excel()
+# загружаем данные при старте
+db = load_data()
 
 
-# ============================================
-# ОБРАБОТЧИКИ КОМАНД
-# ============================================
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    """Обработка команды /start"""
-    chat_id = message.chat.id
-    user_selected_grade[chat_id] = None
-    welcome_text = (
-        "👋 Добро пожаловать в бот силлабусов RANEPA Lyceum!\n\n"
-        "Я помогу вам найти силлабус по интересующему вас предмету.\n\n"
-        "📌 Выберите класс для начала:"
+# === обработчики команд ===
+@tg_bot.message_handler(commands=['start'])
+def start(msg):
+    user_grade[msg.chat.id] = None
+    tg_bot.send_message(
+        msg.chat.id,
+        "👋 Привет! Я бот с силлабусами лицея РАНХиГС.\nВыбери класс ниже 👇",
+        reply_markup=main_kb()
     )
-    bot.send_message(chat_id, welcome_text, reply_markup=get_main_keyboard())
 
 
-@bot.message_handler(commands=['help'])
-def send_help(message):
-    """Обработка команды /help"""
-    chat_id = message.chat.id
-    help_text = (
-        "📖 Справка по боту\n\n"
-        "Как пользоваться:\n"
-        "1️⃣ Нажмите на класс (8–11)\n"
-        "2️⃣ Выберите интересующий вас предмет\n"
-        "3️⃣ Если у предмета несколько учителей - выберите нужного\n"
-        "4️⃣ Получите ссылку на силлабус\n\n"
+@tg_bot.message_handler(commands=['help'])
+def help_msg(msg):
+    tg_bot.send_message(
+        msg.chat.id,
+        "📋 Как пользоваться:\n"
+        "1. Нажми на класс (8–11)\n"
+        "2. Выбери предмет\n"
+        "3. Если учителей несколько — выбери нужного\n"
+        "4. Получи ссылку на силлабус\n\n"
         "Команды:\n"
-        "/start - Главное меню\n"
-        "/help - Справка\n"
-        "/reload - Перезагрузить данные из Excel\n"
-        "/webapp - Открыть мини-приложение\n"
-        "/rep - Перейти в репозиторий на GitHub\n\n"
-        "На каждом экране есть кнопка '⬅️ Назад' для возврата в предыдущее меню."
+        "/start — меню\n"
+        "/help — эта справка\n"
+        "/reload — обновить данные из Excel\n"
+        "/webapp — открыть мини-приложение\n"
+        "/rep — перейти в репозиторий на GitHub",
+        reply_markup=main_kb()
     )
-    bot.send_message(chat_id, help_text, parse_mode='HTML', reply_markup=get_main_keyboard())
 
 
-@bot.message_handler(commands=['reload'])
-def reload_data(message):
-    """Перезагрузка данных из Excel файла"""
-    chat_id = message.chat.id
-    global syllabuses
+@tg_bot.message_handler(commands=['reload'])
+def reload_db(msg):
+    global db
     try:
-        syllabuses = load_syllabuses_from_excel()
-        bot.send_message(
-            chat_id,
-            "✅ Данные успешно перезагружены из файла Excel!",
-            reply_markup=get_main_keyboard()
-        )
+        db = load_data()
+        tg_bot.send_message(msg.chat.id, "✓ данные обновлены", reply_markup=main_kb())
     except Exception as e:
-        bot.send_message(
-            chat_id,
-            f"❌ Ошибка при перезагрузке: {str(e)}",
-            reply_markup=get_main_keyboard()
+        tg_bot.send_message(msg.chat.id, f"✗ ошибка: {e}", reply_markup=main_kb())
+
+
+@tg_bot.message_handler(commands=['webapp'])
+def send_webapp(msg):
+    url = "https://pmikhail2009.github.io/syllabus-miniapp/"
+    mk = types.InlineKeyboardMarkup()
+    mk.add(types.InlineKeyboardButton("🎓 Открыть силлабусы", web_app=types.WebAppInfo(url=url)))
+    tg_bot.send_message(msg.chat.id, "📱 Мини-приложение:", reply_markup=mk)
+
+
+@tg_bot.message_handler(commands=['rep'])
+def send_repo(msg):
+    url = "https://github.com/pmikhail2009/syllabus-miniapp"
+    mk = types.InlineKeyboardMarkup()
+    mk.add(types.InlineKeyboardButton("🔗 GitHub", url=url))
+    tg_bot.send_message(msg.chat.id, f"📦 Исходный код:\n{url}", reply_markup=mk)
+
+
+# === обработчики кнопок меню ===
+@tg_bot.message_handler(func=lambda m: m.text in ['8 класс', '9 класс', '10 класс', '11 класс'])
+def pick_grade(msg):
+    cid = msg.chat.id
+    grade = msg.text.split()[0]  
+    user_grade[cid] = grade
+
+    if grade not in db:
+        tg_bot.send_message(cid, "✗ нет данных для этого класса", reply_markup=main_kb())
+        return
+
+    count = len(db[grade])
+    tg_bot.send_message(
+        cid,
+        f"📚 {grade} класс ({count} предметов)\nВыбери предмет:",
+        reply_markup=subjects_kb(grade, db)
+    )
+
+
+@tg_bot.message_handler(func=lambda m: m.text == '❓ Справка')
+def btn_help(msg):
+    help_msg(msg)
+
+
+@tg_bot.message_handler(func=lambda m: m.text == '🎓 Mini App')
+def btn_webapp(msg):
+    send_webapp(msg)
+
+
+@tg_bot.message_handler(func=lambda m: m.text == '⬅️ Назад')
+def go_back(msg):
+    user_grade[msg.chat.id] = None
+    tg_bot.send_message(msg.chat.id, "📌 Выбери класс:", reply_markup=main_kb())
+
+
+# === выбор предмета ===
+@tg_bot.message_handler(func=lambda m: True)
+def pick_subject(msg):
+    cid = msg.chat.id
+    subj = msg.text
+    grade = user_grade.get(cid)
+
+    if not grade or grade not in db or subj not in db[grade]:
+        tg_bot.send_message(cid, "✗ используй кнопки меню", reply_markup=main_kb())
+        return
+
+    teachers = db[grade][subj]
+
+    # если учитель один — сразу отдаём ссылку
+    if len(teachers) == 1:
+        t = teachers[0]
+        tg_bot.send_message(
+            cid,
+            f"✅ {subj}\n📍 {grade} класс\n👨‍🏫 {t['teacher']}\n\n🔗 {t['url']}",
+            reply_markup=main_kb()
         )
+        user_grade[cid] = None
+        return
 
-
-@bot.message_handler(commands=['webapp'])
-def send_miniapp(message):
-    """Отправка кнопки для запуска Mini App"""
-    chat_id = message.chat.id
-    webapp_url = "https://pmikhail2009.github.io/syllabus-miniapp/"
-    
-    markup = types.InlineKeyboardMarkup()
-    btn = types.InlineKeyboardButton(
-        text="🎓 Открыть силлабусы",
-        web_app=types.WebAppInfo(url=webapp_url)
-    )
-    markup.add(btn)
-    
-    bot.send_message(
-        chat_id,
-        "📱 Нажмите на кнопку ниже, чтобы открыть мини-приложение:",
-        reply_markup=markup
+    # если несколько — показываем выбор
+    user_grade[cid] = {'grade': grade, 'subj': subj, 'teachers': teachers}
+    tg_bot.send_message(
+        cid,
+        f"👨‍🏫 Выбери учителя по предмету '{subj}':",
+        reply_markup=teachers_inline(teachers)
     )
 
 
-@bot.message_handler(commands=['rep'])
-def send_repo_link(message):
-    """Отправка ссылки на репозиторий"""
-    chat_id = message.chat.id
-    repo_url = "https://github.com/pmikhail2009/syllabus-miniapp"
-    
-    markup = types.InlineKeyboardMarkup()
-    btn = types.InlineKeyboardButton(
-        text="🔗 Открыть репозиторий",
-        url=repo_url
+# === callback: выбор учителя ===
+@tg_bot.callback_query_handler(func=lambda c: c.data.startswith('t_'))
+def on_teacher_pick(call):
+    cid = call.message.chat.id
+    idx = int(call.data.split('_')[1])
+    ctx = user_grade.get(cid)
+
+    if not ctx or not isinstance(ctx, dict):
+        tg_bot.answer_callback_query(call.id, "сессия истекла, начни заново")
+        return
+
+    grade, subj, teachers = ctx['grade'], ctx['subj'], ctx['teachers']
+    if idx >= len(teachers):
+        tg_bot.answer_callback_query(call.id, "ошибка выбора")
+        return
+
+    t = teachers[idx]
+    tg_bot.delete_message(cid, call.message.message_id)
+    tg_bot.send_message(
+        cid,
+        f"✅ {subj}\n📍 {grade} класс\n👨‍🏫 {t['teacher']}\n\n🔗 {t['url']}",
+        reply_markup=main_kb()
     )
-    markup.add(btn)
-    
-    bot.send_message(
-        chat_id,
-        f"📦 Исходный код проекта:\n{repo_url}",
-        reply_markup=markup
-    )
+    user_grade[cid] = None
+    tg_bot.answer_callback_query(call.id)
 
 
-# ============================================
-# ОБРАБОТЧИКИ СООБЩЕНИЙ
-# ============================================
-@bot.message_handler(func=lambda message: message.text in ['8 класс', '9 класс', '10 класс', '11 класс'])
-def select_grade(message):
-    """Обработка выбора класса"""
-    chat_id = message.chat.id
-    grade = message.text.replace(' класс', '')
-    user_selected_grade[chat_id] = grade
-
-    grade_text = {
-        '8': '8 класс',
-        '9': '9 класс',
-        '10': '10 класс',
-        '11': '11 класс',
-    }
-
-    if grade in syllabuses:
-        subject_count = len(syllabuses[grade])
-        response = f"📚 {grade_text[grade]} ({subject_count} предметов)\n\nВыберите предмет:"
-        bot.send_message(
-            chat_id,
-            response,
-            parse_mode='HTML',
-            reply_markup=get_subjects_keyboard(grade, syllabuses)
-        )
-    else:
-        bot.send_message(
-            chat_id,
-            f"❌ Данные для класса {grade} не найдены",
-            reply_markup=get_main_keyboard()
-        )
-
-
-@bot.message_handler(func=lambda message: message.text == '❓ Справка')
-def help_button(message):
-    """Справка через кнопку"""
-    send_help(message)
-
-
-@bot.message_handler(func=lambda message: message.text == '🎓 Mini App')
-def miniapp_button(message):
-    """Кнопка Mini App в главном меню"""
-    send_miniapp(message)
-
-
-@bot.message_handler(func=lambda message: message.text == '⬅️ Назад')
-def go_back(message):
-    """Обработка кнопки 'Назад'"""
-    chat_id = message.chat.id
-    user_selected_grade[chat_id] = None
-    bot.send_message(chat_id, "📌 Выберите класс:", reply_markup=get_main_keyboard())
-
-
-@bot.message_handler(func=lambda message: True)
-def select_subject(message):
-    """Обработка выбора предмета"""
-    chat_id = message.chat.id
-    subject = message.text
-    selected_grade = user_selected_grade.get(chat_id)
-
-    if selected_grade and selected_grade in syllabuses:
-        if subject in syllabuses[selected_grade]:
-            teachers_list = syllabuses[selected_grade][subject]
-
-            # Если учитель один - сразу выдаём силлабус
-            if len(teachers_list) == 1:
-                teacher_data = teachers_list[0]
-                response = (
-                    f"✅ {subject}\n\n"
-                    f"📍 Класс: {selected_grade}\n"
-                    f"👨‍🏫 Учитель: {teacher_data['teacher']}\n\n"
-                    f"🔗 Откройте силлабус:\n{teacher_data['url']}"
-                )
-                bot.send_message(chat_id, response, parse_mode='HTML', reply_markup=get_main_keyboard())
-                user_selected_grade[chat_id] = None
-                return
-
-            # Если учителей несколько - показываем выбор
-            else:
-                user_selected_grade[chat_id] = {
-                    'grade': selected_grade,
-                    'subject': subject,
-                    'teachers': teachers_list
-                }
-
-                response = f"👨‍🏫 Выберите учителя по предмету '{subject}':"
-                bot.send_message(
-                    chat_id,
-                    response,
-                    reply_markup=get_teachers_keyboard(teachers_list)
-                )
-                return
-
-    bot.send_message(
-        chat_id,
-        "❌ Предмет не найден. Используйте кнопки меню для навигации.",
-        reply_markup=get_main_keyboard()
-    )
-
-
-# ============================================
-# ОБРАБОТЧИКИ CALLBACK
-# ============================================
-@bot.callback_query_handler(func=lambda call: call.data.startswith('teacher_'))
-def handle_teacher_selection(call):
-    """Обработка выбора учителя через Inline кнопки"""
-    chat_id = call.message.chat.id
-    teacher_idx = int(call.data.split('_')[1])
-    user_data = user_selected_grade.get(chat_id)
-
-    if user_data and isinstance(user_data, dict):
-        grade = user_data['grade']
-        subject = user_data['subject']
-        teachers_list = user_data['teachers']
-
-        if teacher_idx < len(teachers_list):
-            teacher_data = teachers_list[teacher_idx]
-
-            response = (
-                f"✅ {subject}\n\n"
-                f"📍 Класс: {grade}\n"
-                f"👨‍🏫 Учитель: {teacher_data['teacher']}\n\n"
-                f"🔗 Откройте силлабус:\n{teacher_data['url']}"
-            )
-
-            # Удаляем сообщение с кнопками
-            bot.delete_message(chat_id, call.message.message_id)
-
-            # Отправляем результат
-            bot.send_message(chat_id, response, parse_mode='HTML', reply_markup=get_main_keyboard())
-
-            # Сбрасываем состояние
-            user_selected_grade[chat_id] = None
-
-            # Отвечаем на callback
-            bot.answer_callback_query(call.id)
-
-
-# ============================================
-# ЗАПУСК БОТА
-# ============================================
+# === запуск ===
 if __name__ == '__main__':
-    print("🤖 Telegram бот с Excel поддержкой запущен...")
-    print(f"📊 Excel файл: {EXCEL_FILE}")
-    print(f"✅ Загружено предметов из {len(syllabuses)} классов")
-    print(f"📱 Mini App: /webapp")
-    print(f"🔗 Репозиторий: /rep")
-    
+    print(f"🤖 бот запущен | файл: {XLS_PATH} | классов: {len(db)}")
+    print("команды: /start /help /reload /webapp /rep")
     try:
-        bot.infinity_polling()
+        tg_bot.infinity_polling()
     except KeyboardInterrupt:
-        print("\n⏹️ Бот остановлен пользователем")
+        print("\n⏹ остановлен")
     except Exception as e:
-        print(f"❌ Ошибка: {e}")
+        print(f"✗ упал: {e}")
